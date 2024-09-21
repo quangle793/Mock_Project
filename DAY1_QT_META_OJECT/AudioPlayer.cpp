@@ -13,25 +13,32 @@ void AudioPlayer::openFile(const QString &filePath)
 {
     player->setMedia(QUrl::fromLocalFile(filePath));
     player->play();
-    parseFileName(filePath);
+    openFolder(filePath);
+    setSongTitle(songTitle_);
     qDebug() << "filePath" << filePath ;
 }
 
-void AudioPlayer::openFolder(const QString &folderPath)
+void AudioPlayer::openFolder(const QString &filePath)
 {
-    QDir directory(folderPath);
-       QStringList mp3Files = directory.entryList(QStringList() << "*.mp3", QDir::Files); // Lấy danh sách các file .mp3 trong thư mục
+    QString fileName = filePath.section('/', -1); // Lấy phần cuối của đường dẫn (tên file)
 
-       // Nếu có ít nhất một file MP3
-       if (!mp3Files.isEmpty()) {
-           QString firstMp3File = mp3Files.first();  // Chọn file đầu tiên trong danh sách
-           QString filePath = directory.absoluteFilePath(firstMp3File);  // Đường dẫn đầy đủ tới file MP3
-           qDebug() << "Opening file:" << filePath;
+       // Bỏ phần mở rộng .mp3
+       fileName = fileName.section('.', 0, 0);
 
-           openFile(filePath);  // Mở file MP3 bằng cách gọi hàm openFile
+       // Tách chuỗi dựa trên dấu gạch ngang
+       QStringList parts = fileName.split('-');
+       if (parts.size() >= 2) {
+           songTitle_ = parts.at(0).trimmed();   // Phần trước dấu gạch ngang là tên bài hát
+           artistName_ = parts.at(1).trimmed(); // Phần sau là tên ca sĩ
+           qDebug() << "Tên bài hát: " << songTitle_;
+           qDebug() << "Tên ca sĩ: " << artistName_;
        } else {
-           qDebug() << "No MP3 files found in the folder!";
+           qDebug() << "Không thể lấy được thông tin bài hát và ca sĩ.";
        }
+       // xử lý tên bài hát
+       QString songTitle = filePath.section('/', -1);  // Lấy phần cuối cùng của đường dẫn
+       songTitle = songTitle.split('-').first();       // Lấy phần trước dấu "-"
+       addSong(songTitle);  // Thêm tên bài hát vào danh sách
 }
 
 void AudioPlayer::play()
@@ -49,52 +56,58 @@ void AudioPlayer::stop()
     player->stop();
 }
 
+void AudioPlayer::clickArtist(const QString &filePath)
+{
+    player->setMedia(QUrl::fromLocalFile(filePath));
+    player->play();
+}
+
 QString AudioPlayer::songTitle() const {
-    return player->metaData("Title").toString();
+    return songTitle_;
 }
 
 QString AudioPlayer::artistName() const {
-    return player->metaData("Author").toString();
+    return artistName_;
+}
+QStringList AudioPlayer::songList() const {
+    return songList_;
+}
+void AudioPlayer::addSong(const QString &song) {
+    // Kiểm tra xem bài hát đã tồn tại trong danh sách chưa
+    if (!songList_.contains(song)) {
+        songList_.append(song);  // Nếu chưa tồn tại, thêm bài hát vào danh sách
+        emit songListChanged();  // Phát tín hiệu khi danh sách thay đổi
+        qDebug() << "Added song: " << song;  // Debug thêm bài hát
+    } else {
+        qDebug() << "Song already exists: " << song;  // Debug nếu bài hát đã tồn tại
+    }
 }
 
-void AudioPlayer::updateMetaData() {
-    QString metaTitle = player->metaData("Title").toString();
-        QString metaArtist = player->metaData("Author").toString();
+void AudioPlayer::setSongTitle(const QString &title)
+{
+    if (songTitle_ != title) {
+        songTitle_ = title;
+        emit songTitleChanged();  // Phát tín hiệu khi giá trị thay đổi
+    }
+}
 
-        // Kiểm tra nếu metadata có sẵn
-        if (!metaTitle.isEmpty() && !metaArtist.isEmpty()) {
-            songTitle_ = metaTitle;
-            artistName_ = metaArtist;
-            emit songTitleChanged();
-            emit artistNameChanged();
-        } else {
-            qDebug() << "Metadata not available, using filename to extract info";
-        }
+void AudioPlayer::setArtistName(const QString &name)
+{
+    if (artistName_ != name) {
+        artistName_ = name;
+        emit artistNameChanged();  // Phát tín hiệu khi giá trị thay đổi
+    }
+}
+
+
+void AudioPlayer::updateMetaData() {
 }
 
 void AudioPlayer::onMediaStatusChanged(QMediaPlayer::MediaStatus status)
 {
     // Khi media đã tải xong và metadata có sẵn
-        if (status == QMediaPlayer::LoadedMedia) {
+    if (status == QMediaPlayer::LoadedMedia) {
             updateMetaData();
         }
 }
 
-void AudioPlayer::parseFileName(const QString &filePath)
-{
-    QFileInfo fileInfo(filePath);
-        QString baseName = fileInfo.baseName();  // Lấy tên file mà không có phần mở rộng ".mp3"
-
-        // Tách tên bài hát và tên ca sĩ từ tên file
-        QStringList parts = baseName.split('-');
-        if (parts.size() >= 3) {
-            songTitle_ = parts[0]; // Phần đầu là tên bài hát
-            artistName_ = parts[1]; // Phần giữa là tên ca sĩ
-        } else {
-            songTitle_ = "Unknown Title";
-            artistName_ = "Unknown Artist";
-        }
-
-        emit songTitleChanged();
-        emit artistNameChanged();
-}

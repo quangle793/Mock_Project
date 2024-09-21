@@ -24,16 +24,35 @@ ApplicationWindow {
 
         anchors.left: parent.left
 
-        Text {
+        Column {
+                   anchors.centerIn: parent
+                   // Hiển thị danh sách bài hát
+                   ListView {
+                       id: songListView
+                       width: albumSection.width
+                       height: albumSection.height * 0.8
+                       model: audioPlayer.songList  // Kết nối danh sách từ AudioPlayer
 
-            text: "Album"
+                       delegate: Rectangle {
+                           width: songListView.width
+                           height: 40
+                           color: index % 2 == 0 ? "#e0e0e0" : "#ffffff"  // Đổi màu nền từng dòng
 
-            anchors.centerIn: parent
-
-            font.pixelSize: 48
-
-        }
-
+                           Text {
+                               text: modelData  // Tên bài hát từ model
+                               anchors.centerIn: parent
+                           }
+                           MouseArea {
+                               anchors.fill: parent
+                               onClicked: {
+                                   console.log("Selected song: " + modelData);
+//                                   audioPlayer.clickArtist();
+                                   // Thêm logic xử lý khi chọn bài hát
+                               }
+                           }
+                       }
+                   }
+               }
     }
 
     // Phần thông tin bài hát (Bên phải)
@@ -66,9 +85,12 @@ ApplicationWindow {
 
                 color: "#e0e0e0"
 
+
+
                 Text {
 
-                    text: audioPlayer.songTitle + audioPlayer.artistName
+                    text: audioPlayer.songTitle
+                    onTextChanged: console.log("Song title changed to: " + audioPlayer.songTitle)
 
                     anchors.centerIn: parent
 

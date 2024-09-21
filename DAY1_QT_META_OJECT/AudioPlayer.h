@@ -10,8 +10,10 @@
 class AudioPlayer : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString songTitle READ songTitle NOTIFY songTitleChanged)
-    Q_PROPERTY(QString artistName READ artistName NOTIFY artistNameChanged)
+    Q_PROPERTY(QString songTitle READ songTitle WRITE setSongTitle NOTIFY songTitleChanged)
+    Q_PROPERTY(QString artistName READ artistName WRITE setArtistName NOTIFY artistNameChanged)
+    Q_PROPERTY(QStringList songList READ songList NOTIFY songListChanged)
+
 public:
     explicit AudioPlayer(QObject *parent = nullptr);
 
@@ -28,22 +30,31 @@ public:
     // Phương thức để dừng nhạc
     Q_INVOKABLE void stop();
     // Lấy tên bài hát từ metadata
-    QString songTitle() const;
+    Q_INVOKABLE void clickArtist(const QString &filePath);
+
 
     // Lấy tên ca sĩ từ metadata
+    QString songTitle() const;
     QString artistName() const;
+    // danh sach bai hat
+    QStringList songList() const;  // Hàm trả về danh sách bài hát
+    void addSong(const QString &song);  // Thêm bài hát vào danh sách
+    void setSongTitle(const QString &title);
+    void setArtistName(const QString &name);
+
 signals:
     void songTitleChanged();
     void artistNameChanged();
+    void songListChanged();
 
 private slots:
     void updateMetaData();
     void onMediaStatusChanged(QMediaPlayer::MediaStatus status);
-    void parseFileName(const QString &filePath);
 private:
     QMediaPlayer *player;
-    QString songTitle_;
-    QString artistName_;
+    QString songTitle_ = "";
+    QString artistName_ = "";
+    QStringList songList_;
 };
 
 #endif // AUDIOPLAYER_H
